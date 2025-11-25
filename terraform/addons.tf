@@ -89,7 +89,7 @@ module "eks_addons" {
   # =============================================================================
   # OPTIONAL: MONITORING STACK
   # =============================================================================
-   Uncomment below to enable monitoring (increases costs)
+   #Uncomment below to enable monitoring (increases costs)
   
    enable_kube_prometheus_stack = var.enable_monitoring
    kube_prometheus_stack = {
