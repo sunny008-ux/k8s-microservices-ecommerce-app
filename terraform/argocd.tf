@@ -7,7 +7,8 @@ resource "time_sleep" "wait_for_cluster" {
   create_duration = "30s"
   depends_on = [
     module.retail_app_eks,
-    module.eks_addons
+    helm_release.cert_manager,
+    helm_release.ingress_nginx
   ]
 }
 
@@ -30,17 +31,22 @@ resource "helm_release" "argocd" {
       # Server configuration
       server = {
         service = {
-          type = "ClusterIP"
+          type = "LoadBalancer"
+          annotations = {
+            "service.beta.kubernetes.io/aws-load-balancer-type"   = "nlb"
+            "service.beta.kubernetes.io/aws-load-balancer-scheme" = "internet-facing"
+            "service.beta.kubernetes.io/aws-load-balancer-name"   = "${var.cluster_name}-argocd-server"
+          }
         }
         ingress = {
-          enabled = false  # We'll use port-forward for access
+          enabled = false
         }
-        # Enable insecure mode for easier local access
+        # Enable insecure mode for easier access (HTTP instead of HTTPS)
         extraArgs = [
           "--insecure"
         ]
       }
-      
+
       # Controller configuration
       controller = {
         resources = {
@@ -54,7 +60,7 @@ resource "helm_release" "argocd" {
           }
         }
       }
-      
+
       # Repo server configuration
       repoServer = {
         resources = {
@@ -68,7 +74,7 @@ resource "helm_release" "argocd" {
           }
         }
       }
-      
+
       # Redis configuration
       redis = {
         resources = {

@@ -80,8 +80,18 @@ output "argocd_namespace" {
 }
 
 output "argocd_server_port_forward" {
-  description = "Command to port-forward to ArgoCD server"
+  description = "Command to port-forward to ArgoCD server (alternative to LoadBalancer)"
   value       = "kubectl port-forward svc/argocd-server -n ${var.argocd_namespace} 8080:443"
+}
+
+output "argocd_loadbalancer_url" {
+  description = "Command to get ArgoCD LoadBalancer URL"
+  value       = "kubectl get svc -n ${var.argocd_namespace} argocd-server -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+}
+
+output "argocd_url" {
+  description = "Command to get the full ArgoCD URL"
+  value       = "echo 'http://'$(kubectl get svc -n ${var.argocd_namespace} argocd-server -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 }
 
 output "argocd_admin_password" {
@@ -111,11 +121,11 @@ output "retail_store_url" {
 output "useful_commands" {
   description = "Useful commands for managing the cluster"
   value = {
-    get_nodes           = "kubectl get nodes"
-    get_pods_all        = "kubectl get pods -A"
-    get_retail_store    = "kubectl get pods -n retail-store"
-    argocd_apps         = "kubectl get applications -n ${var.argocd_namespace}"
-    ingress_status      = "kubectl get ingress -A"
-    describe_cluster    = "kubectl cluster-info"
+    get_nodes        = "kubectl get nodes"
+    get_pods_all     = "kubectl get pods -A"
+    get_retail_store = "kubectl get pods -n retail-store"
+    argocd_apps      = "kubectl get applications -n ${var.argocd_namespace}"
+    ingress_status   = "kubectl get ingress -A"
+    describe_cluster = "kubectl cluster-info"
   }
 }
