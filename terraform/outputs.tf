@@ -184,3 +184,31 @@ output "monitoring_commands" {
     port_forward_prometheus = "kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090"
   } : {}
 }
+
+# =============================================================================
+# DESTROY HELPER
+# =============================================================================
+
+output "destroy_instructions" {
+  description = "Instructions for clean destruction of all resources"
+  value       = <<-EOT
+    To destroy all resources cleanly, run these commands in order:
+    
+    1. First, configure kubectl:
+       aws eks update-kubeconfig --region ${var.aws_region} --name ${module.retail_app_eks.cluster_name}
+    
+    2. Delete all ArgoCD applications (to prevent them from recreating resources):
+       kubectl delete applications.argoproj.io --all -n ${var.argocd_namespace} --timeout=60s
+    
+    3. Delete all LoadBalancer services (to clean up AWS load balancers):
+       kubectl delete svc --all-namespaces --field-selector spec.type=LoadBalancer --timeout=60s
+    
+    4. Wait 30 seconds for AWS to clean up load balancers
+    
+    5. Run terraform destroy:
+       terraform destroy -auto-approve
+    
+    OR simply run: terraform destroy -auto-approve
+    (The cleanup scripts are now automated in the Terraform configuration)
+  EOT
+}

@@ -83,14 +83,13 @@ resource "helm_release" "kube_prometheus_stack" {
   version          = "55.5.0"
 
   # Cleanup settings for reliable destroy
-  cleanup_on_fail = true
-  wait            = false # Don't wait for all resources to be ready
-  timeout         = 1800  # Increased to 30 minutes
-
-  # Ensure clean destroy
-  wait_for_jobs = false
-  replace       = true
-  atomic        = false # Don't rollback on failure
+  cleanup_on_fail  = true
+  wait             = false # Don't wait for all resources to be ready
+  timeout          = 1800  # Increased to 30 minutes
+  wait_for_jobs    = false
+  replace          = true
+  atomic           = false # Don't rollback on failure
+  disable_webhooks = true
 
   values = [
     yamlencode({

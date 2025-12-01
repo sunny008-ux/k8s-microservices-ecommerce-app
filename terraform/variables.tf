@@ -61,3 +61,9 @@ variable "enable_aws_lb_controller" {
   type        = bool
   default     = false
 }
+
+variable "skip_cleanup_on_destroy" {
+  description = "Skip cleanup scripts on destroy (useful if cluster is already deleted)"
+  type        = bool
+  default     = false
+}

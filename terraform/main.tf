@@ -80,3 +80,36 @@ module "retail_app_eks" {
 
   tags = local.common_tags
 }
+
+# =============================================================================
+# CLEANUP LOAD BALANCERS BEFORE VPC DESTRUCTION
+# =============================================================================
+
+resource "null_resource" "cleanup_load_balancers" {
+  triggers = {
+    cluster_name = local.cluster_name
+    region       = var.aws_region
+    vpc_id       = module.vpc.vpc_id
+  }
+
+  # Clean up any remaining load balancers before destroying VPC
+  provisioner "local-exec" {
+    when        = destroy
+    command     = <<-EOT
+      echo "Cleaning up load balancers in VPC ${self.triggers.vpc_id}..."
+      for lb in $(aws elbv2 describe-load-balancers --region ${self.triggers.region} --query "LoadBalancers[?VpcId=='${self.triggers.vpc_id}'].LoadBalancerArn" --output text 2>nul); do
+        echo "Deleting load balancer: $lb"
+        aws elbv2 delete-load-balancer --load-balancer-arn $lb --region ${self.triggers.region} 2>nul || echo "Failed to delete $lb"
+      done
+      for lb in $(aws elb describe-load-balancers --region ${self.triggers.region} --query "LoadBalancerDescriptions[?VPCId=='${self.triggers.vpc_id}'].LoadBalancerName" --output text 2>nul); do
+        echo "Deleting classic load balancer: $lb"
+        aws elb delete-load-balancer --load-balancer-name $lb --region ${self.triggers.region} 2>nul || echo "Failed to delete $lb"
+      done
+      echo "Waiting 30 seconds for load balancers to be deleted..."
+      timeout /t 30 /nobreak >nul 2>&1 || ping 127.0.0.1 -n 31 >nul
+    EOT
+    interpreter = ["cmd", "/C"]
+  }
+
+  depends_on = [module.retail_app_eks]
+}
