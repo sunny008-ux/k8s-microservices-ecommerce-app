@@ -159,6 +159,7 @@ resource "helm_release" "kube_prometheus_stack" {
                 url       = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
                 access    = "proxy"
                 isDefault = true
+                uid       = "prometheus"
               }
             ]
           }
