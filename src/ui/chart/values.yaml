@@ -102,7 +102,7 @@ ingresses:
     hosts: []
     annotations:
       # SSL redirect Change to false to true
-      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
       nginx.ingress.kubernetes.io/proxy-body-size: "8m"
       nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
