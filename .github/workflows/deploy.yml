@@ -1,4 +1,4 @@
-name: SonarQube Analysis
+name: SonarQube Analysis + Docker Build
 
 on:
   push:
@@ -7,10 +7,21 @@ on:
     branches: [ main ]
 
 jobs:
-  sonar:
+  ci:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      matrix:
+        service: [carts, orders, checkout]
+
     steps:
+      # --------------------
+      # CHECKOUT
+      # --------------------
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -26,24 +37,17 @@ jobs:
           java-version: '21'
 
       # --------------------
-      # BUILD ONLY JAVA MICROSERVICES
+      # BUILD JAVA MICROSERVICES
       # --------------------
-      - name: Build Java services (if any)
+      - name: Build Java services
         run: |
-          set -e
-          FOUND=false
           for pom in $(find . -name pom.xml); do
-            FOUND=true
             echo "Building Java service: $pom"
             mvn -f $pom clean package -DskipTests
           done
 
-          if [ "$FOUND" = false ]; then
-            echo "No Java services found"
-          fi
-
       # --------------------
-      # SONAR SCAN
+      # SONARQUBE SCAN
       # --------------------
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
@@ -55,3 +59,39 @@ jobs:
             -Dsonar.projectKey=ecommerce-microservices
             -Dsonar.sources=.
             -Dsonar.java.binaries=**/target
+
+      # ======================================================
+      # DOCKER + ECR (C1 CONTINUATION)
+      # ======================================================
+
+      # --------------------
+      # AWS AUTH (OIDC)
+      # --------------------
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::797923187526:role/ecom-microservices
+          aws-region: us-east-1
+
+      # --------------------
+      # LOGIN TO ECR
+      # --------------------
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --------------------
+      # BUILD & PUSH IMAGE
+      # --------------------
+      - name: Build and Push Docker image
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          IMAGE_TAG=${{ github.sha }}
+          SERVICE=${{ matrix.service }}
+
+          IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:$IMAGE_TAG
+
+          echo "Building image for $SERVICE"
+          docker build -t $IMAGE_URI ./services/$SERVICE
+
+          echo "Pushing image $IMAGE_URI"
+          docker push $IMAGE_URI
