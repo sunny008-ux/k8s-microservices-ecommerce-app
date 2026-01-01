@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [carts, orders, checkout]
+        service: [cart, checkout, orders, catalog, ui]
 
     steps:
       # --------------------
@@ -91,7 +91,7 @@ jobs:
           IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:$IMAGE_TAG
 
           echo "Building image for $SERVICE"
-          docker build -t $IMAGE_URI ./services/$SERVICE
+          docker build -t $IMAGE_URI ./src/$SERVICE
 
           echo "Pushing image $IMAGE_URI"
           docker push $IMAGE_URI
