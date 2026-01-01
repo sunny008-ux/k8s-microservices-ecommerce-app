@@ -2,36 +2,38 @@ name: Build and SonarQube Scan
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  build:
-    name: Build & Analyze
+  sonar:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # 2️⃣ Set up Java (REQUIRED)
+      # ---- JAVA SETUP ----
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
 
-      # 3️⃣ Build Java project (IMPORTANT)
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
+      # ---- BUILD JAVA MICROSERVICES ONLY ----
+      - name: Build Java services
+        run: |
+          for service in auth-service user-service order-service; do
+            if [ -f "$service/pom.xml" ]; then
+              echo "Building $service"
+              mvn -f $service/pom.xml clean package -DskipTests
+            fi
+          done
 
-      # 4️⃣ SonarQube Scan
+      # ---- SONAR SCAN ----
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
         env:
@@ -40,4 +42,5 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=ecommerce-microservices
-            -Dsonar.java.binaries=services/**/target
+            -Dsonar.sources=.
+            -Dsonar.java.binaries=**/target
