@@ -1,4 +1,4 @@
-name: Build and SonarQube Scan
+name: SonarQube Analysis
 
 on:
   push:
@@ -16,24 +16,35 @@ jobs:
         with:
           fetch-depth: 0
 
-      # ---- JAVA SETUP ----
+      # --------------------
+      # JAVA SETUP
+      # --------------------
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      # ---- BUILD JAVA MICROSERVICES ONLY ----
-      - name: Build Java services
+      # --------------------
+      # BUILD ONLY JAVA MICROSERVICES
+      # --------------------
+      - name: Build Java services (if any)
         run: |
-          for service in auth-service user-service order-service; do
-            if [ -f "$service/pom.xml" ]; then
-              echo "Building $service"
-              mvn -f $service/pom.xml clean package -DskipTests
-            fi
+          set -e
+          FOUND=false
+          for pom in $(find . -name pom.xml); do
+            FOUND=true
+            echo "Building Java service: $pom"
+            mvn -f $pom clean package -DskipTests
           done
 
-      # ---- SONAR SCAN ----
+          if [ "$FOUND" = false ]; then
+            echo "No Java services found"
+          fi
+
+      # --------------------
+      # SONAR SCAN
+      # --------------------
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
         env:
