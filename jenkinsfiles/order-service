@@ -1,0 +1,73 @@
+pipeline{
+    agent any
+    tools{
+        maven 'maven-3.9'
+        jdk 'jdk-17'
+    }
+    environment{
+        REGISTRY = ''
+        IMAGE = 'ecommerce-orders'
+        SONARQUBE_ENV = 'sonarqube-server'
+        TAG = "{$BUILD_NUMBER}"
+    }
+    stages{
+        stage ('Checkoutcode'){
+            steps {
+                git branch 'main',
+                    url: 'https://github.com/sunny008-ux/k8s-microservices-ecommerce-app.git'
+            }
+        }
+
+        stage ('Build & Test'){
+            steps {
+                dir ('src/orders') {
+                    sh 'mvn clean test'
+                }
+            }
+        }
+
+    // SonarQube- Quality check
+
+        stage ('Code Quality Check'){
+            steps {
+                dir ('src/orders'){
+                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                        sh """
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=ecommerce-orders \
+                          -Dsonar.projectName=ecommerce-orders \
+                          -Dsonar.host.url=http://sonarqube:9000 \
+                          -Dsonar.login=${SONAR_TOKEN}
+                        """ 
+                    }
+                }
+            }
+
+        }
+
+        stage ('BUILD IMAGE') {
+            steps {
+                dir ('src/orders'){
+                    sh "docker build -t ${REGISTRY}/${IMAGE}:${TAG} ."
+                }
+            }
+        }
+
+        stage ('Security - Trivy Scan') {
+            steps {
+                sh """
+                trivy image --exit-code 1 --severity HIGH,CRITICAL \
+                  ${REGISTRY}/${IMAGE}:${TAG}
+                """
+            }
+        }
+
+        stage ('PUSH IMAGE') {
+            steps {
+                sh 'docker push ${REGISTRY}/${IMAGE}:${TAG}'
+            }
+        }
+            
+    }
+
+}
