@@ -1,46 +1,45 @@
 pipeline{
     agent any
-    tools{
+    tools {
+        jdk 'jdk17'
         maven 'maven-3.9'
-        jdk 'jdk-17'
     }
-    environment{
-        REGISTRY = 'sunnytyagi13'
-        IMAGE = 'ecommerce-orders'
+    environment {
+        REGISTRY = ''
+        IMAGE = 'ecommerce-cart'
         SONARQUBE_ENV = 'sonarqube-server'
         TAG = "${BUILD_NUMBER}"
     }
-    stages{
-        stage ('Checkoutcode'){
+    stages {
+        stage ('Checkoutcode') {
             steps {
-                git branch 'main',
+                git branch 'main'
                     url: 'https://github.com/sunny008-ux/k8s-microservices-ecommerce-app.git'
             }
         }
 
-        stage ('Build & Test'){
+        stage ('Build & Test') {
             steps {
-                dir ('src/orders') {
+                dir ('src/cart') {
                     sh 'mvn clean test'
                 }
             }
         }
 
-    // SonarQube- Quality check
-
-        stage ('Code Quality Check'){
+        stage ('Code Quality Check') {
             steps {
-                dir ('src/orders'){
+                dir ('src/cart') {
                     withSonarQubeEnv("${SONARQUBE_ENV}") {
                         sh """
                         mvn sonar:sonar \
                           -Dsonar.projectKey=ecommerce-orders \
-                          -Dsonar.projectName=ecommerce-orders
-                        """ 
+                          -Dsonar.projectName=ecommerce-orders \
+                          -Dsonar.host.url=http://sonarqube:9000 \
+                          -Dsonar.login=${SONAR_TOKEN}
+                        """
                     }
                 }
             }
-
         }
 
         stage ('BUILD IMAGE') {
@@ -60,22 +59,10 @@ pipeline{
             }
         }
 
-        stage('Push Image') {
+        stage ('PUSH IMAGE') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-token',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh """
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker push ${REGISTRY}/${IMAGE}:${TAG}
-                    """
-                }
+                sh 'docker push ${REGISTRY}/${IMAGE}:${TAG}'
             }
         }
-
-            
     }
-
 }
