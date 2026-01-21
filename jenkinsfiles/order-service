@@ -13,7 +13,7 @@ pipeline{
     stages{
         stage ('Checkoutcode'){
             steps {
-                git branch 'main',
+                git branch: 'main',
                     url: 'https://github.com/sunny008-ux/k8s-microservices-ecommerce-app.git'
             }
         }
